@@ -1,6 +1,6 @@
 # herokurustbuild
 
-Heroku Rust build.
+Heroku Rust build with Heroku CLI installed.
 
 # Buildpack
 
