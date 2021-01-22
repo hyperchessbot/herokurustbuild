@@ -10,5 +10,7 @@ https://github.com/emk/heroku-buildpack-rust
 
 ```
 heroku create {appname} --buildpack emk/rust
+# for existing app
+# heroku buildpacks:set emk/rust
 git push heroku
 ```
