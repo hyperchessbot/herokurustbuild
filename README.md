@@ -1,6 +1,6 @@
 # herokurustbuild
 
-Heroku Rrust build.
+Heroku Rust build.
 
 # Buildpack
 
