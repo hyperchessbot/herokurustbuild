@@ -1,0 +1,2 @@
+# herokurustbuild
+heroku rust build
