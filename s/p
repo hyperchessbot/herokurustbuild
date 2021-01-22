@@ -1,0 +1,12 @@
+#!/bin/bash
+
+git remote add origin https://github.com/hyperchessbot/herokurustbuild.git
+git remote add github https://github.com/hyperchessbot/herokurustbuild.git
+git remote add gilab https://gitlab.com/hyperchessbotauthor/herokurustbuild
+
+git add . -A
+
+git commit -m "$*"
+
+git push https://hyperchessbot:$GITHUB_PUSH_TOKEN@github.com/hyperchessbot/herokurustbuild.git main
+git push https://hyperchessbot:$GITLAB_PUSH_TOKEN@gitlab.com/hyperchessbotauthor/herokurustbuild main
