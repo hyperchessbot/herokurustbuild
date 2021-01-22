@@ -1,1 +1,1 @@
-worker: ./target/release/hello
+web: ./target/release/hello

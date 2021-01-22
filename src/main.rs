@@ -21,6 +21,10 @@ async fn page() -> impl Responder {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    let port = std::env::var("PORT").unwrap_or("8080".to_string());
+
+    println!("launching server at port {}", port);
+
     HttpServer::new(|| App::new()
         .service(index)
         .service(welcome)
@@ -31,7 +35,7 @@ async fn main() -> std::io::Result<()> {
                 .route(actix_web::web::post().to(page))
         )
     )
-        .bind("127.0.0.1:8080")?
+        .bind(format!("127.0.0.1:{}", port))?
         .run()
         .await
 }
