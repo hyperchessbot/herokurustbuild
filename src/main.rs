@@ -35,7 +35,7 @@ async fn main() -> std::io::Result<()> {
                 .route(actix_web::web::post().to(page))
         )
     )
-        .bind(format!("127.0.0.1:{}", port))?
+        .bind(format!("0.0.0.0:{}", port))?
         .run()
         .await
 }
