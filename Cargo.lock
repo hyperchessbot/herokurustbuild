@@ -1130,9 +1130,9 @@ checksum = "89203f3fba0a3795506acaad8ebce3c80c0af93f994d5a1d7a0b1eeb23271929"
 
 [[package]]
 name = "lichessbot"
-version = "0.1.23"
+version = "0.1.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d99f57b6104e526539095ee12e4846378b7a21450106e239e7c9cc1208d70fa8"
+checksum = "d4f9a9b82a240ba43507720abd8990e6f913b98ec81c4c13a9045289e07bb457"
 dependencies = [
  "bytes 1.0.1",
  "dotenv",

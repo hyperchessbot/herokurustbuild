@@ -3,13 +3,13 @@ use log::{log_enabled, info, Level};
 use std::sync::mpsc;
 use std::{thread, time};
 
-use actix_web::{dev::Server, middleware, rt, web, App, HttpServer, get, Responder, HttpResponse};
+use actix_web::{middleware, rt, web, App, HttpServer, get, Responder, HttpResponse};
 
 use lichessbot::lichessbot::*;
 
 #[get("/")]
-async fn index() -> impl Responder {
-    format!("Hello!")
+async fn index(bot_state: web::Data::<std::sync::Arc<tokio::sync::Mutex<BotState>>>) -> impl Responder {
+    format!("Hello! {:?}", bot_state)
 }
 
 async fn page() -> impl Responder {
@@ -24,32 +24,6 @@ async fn welcome(web::Path(name): web::Path<String>) -> impl Responder {
 #[get("/{greeting}/{name}")]
 async fn greeting(web::Path((greeting, name)): web::Path<(String, String)>) -> impl Responder {
     format!("{} {}!", greeting, name)
-}
-
-fn run_server(tx: mpsc::Sender<Server>, port: String) -> std::io::Result<()> {
-    let mut sys = rt::System::new("test");
-
-    if log_enabled!(Level::Info){
-        info!("launching server at port {}", port);
-    }
-
-    let srv = HttpServer::new(|| App::new()
-        .wrap(middleware::Logger::default())
-        .service(index)
-        .service(
-            actix_web::web::resource(vec!["/page"])
-                .route(actix_web::web::get().to(page))
-                .route(actix_web::web::post().to(page))
-        )
-        .service(welcome)
-        .service(greeting)        
-    )
-        .bind(format!("0.0.0.0:{}", port))?
-        .run();
-
-    let _ = tx.send(srv.clone());
-
-    sys.block_on(srv)
 }
 
 async fn spawn_bot(bot: LichessBot){
@@ -72,13 +46,42 @@ async fn main() {
 
     let (tx, rx) = mpsc::channel();
 
+    let bot = LichessBot::new();
+
+    let bot_data = web::Data::new(bot.state.clone());
+
+    let bot_data_clone = bot_data.clone();
+
     thread::spawn(move || {
-        let _ = run_server(tx, port);
+        let bot_data = bot_data_clone;
+        
+        let mut sys = rt::System::new("test");
+
+        if log_enabled!(Level::Info){
+            info!("launching server at port {}", port);
+        }
+        
+        let srv = HttpServer::new(move || App::new()
+            .app_data(bot_data.clone())
+            .wrap(middleware::Logger::default())
+            .service(index)
+            .service(
+                actix_web::web::resource(vec!["/page"])
+                    .route(actix_web::web::get().to(page))
+                    .route(actix_web::web::post().to(page))
+            )
+            .service(welcome)
+            .service(greeting)        
+        )
+            .bind(format!("0.0.0.0:{}", port))?
+            .run();
+
+        let _ = tx.send(srv.clone());
+
+        sys.block_on(srv)
     });
 
     let srv = rx.recv().unwrap();
-
-    let bot = LichessBot::new();
 
     let _ = spawn_bot(bot).await;
 
