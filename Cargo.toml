@@ -8,6 +8,7 @@ edition = "2018"
 
 [dependencies]
 actix-web = "3.3.2"
+lichessbot = "0.1.23"
 
 [dependencies.tokio]
 version = "1.0.1"

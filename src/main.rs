@@ -3,6 +3,8 @@ use std::{thread, time};
 
 use actix_web::{dev::Server, middleware, rt, web, App, HttpServer, get, Responder, HttpResponse};
 
+use lichessbot::lichessbot::*;
+
 #[get("/")]
 async fn index() -> impl Responder {
     format!("Hello!")
