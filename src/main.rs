@@ -1,3 +1,5 @@
+use log::{log_enabled, info, Level};
+
 use std::sync::mpsc;
 use std::{thread, time};
 
@@ -24,12 +26,12 @@ async fn greeting(web::Path((greeting, name)): web::Path<(String, String)>) -> i
     format!("{} {}!", greeting, name)
 }
 
-fn run_app(tx: mpsc::Sender<Server>) -> std::io::Result<()> {
+fn run_server(tx: mpsc::Sender<Server>, port: String) -> std::io::Result<()> {
     let mut sys = rt::System::new("test");
 
-    let port = std::env::var("PORT").unwrap_or("8080".to_string());
-
-    println!("launching server at port {}", port);
+    if log_enabled!(Level::Info){
+        info!("launching server at port {}", port);
+    }
 
     let srv = HttpServer::new(|| App::new()
         .wrap(middleware::Logger::default())
@@ -45,10 +47,8 @@ fn run_app(tx: mpsc::Sender<Server>) -> std::io::Result<()> {
         .bind(format!("0.0.0.0:{}", port))?
         .run();
 
-    // send server controller to main thread
     let _ = tx.send(srv.clone());
 
-    // run future
     sys.block_on(srv)
 }
 
@@ -56,38 +56,37 @@ async fn spawn_bot(bot: LichessBot){
     tokio::spawn(async move {
         let mut bot = bot;
 
-        println!("starting bot");
+        if log_enabled!(Level::Info){
+            info!("starting bot {:?}", std::env::var("RUST_BOT_NAME"));
+        }
 
         let _ = bot.stream().await;
     });
 }
 
 #[tokio::main]
-async fn main() {
-    //std::env::set_var("RUST_LOG", "actix_web=info,actix_server=trace");
+async fn main() {    
     env_logger::init();
+
+    let port = std::env::var("PORT").unwrap_or("8080".to_string());
 
     let (tx, rx) = mpsc::channel();
 
-    println!("START SERVER");
     thread::spawn(move || {
-        let _ = run_app(tx);
+        let _ = run_server(tx, port);
     });
 
     let srv = rx.recv().unwrap();
 
-    let mut bot = LichessBot::new();
+    let bot = LichessBot::new();
 
-    //let spawn_bot_result = spawn_bot(bot).await;
+    let _ = spawn_bot(bot).await;
 
-    //println!("spawn bot result {:?}", spawn_bot_result);
-
-    let _ = bot.stream().await;
-
-    /*println!("WAITING 10 SECONDS");
     thread::sleep(time::Duration::from_secs(40));
 
-    println!("STOPPING SERVER");
-    // init stop server and wait until server gracefully exit
-    rt::System::new("").block_on(srv.stop(true));*/
+    if log_enabled!(Level::Info){
+        info!("shutting down server");
+    }
+
+    rt::System::new("").block_on(srv.stop(true));
 }

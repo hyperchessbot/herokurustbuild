@@ -931,6 +931,7 @@ dependencies = [
  "actix-web",
  "env_logger",
  "lichessbot",
+ "log",
  "tokio 1.1.0",
 ]
 
