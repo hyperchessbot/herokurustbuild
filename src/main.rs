@@ -52,10 +52,20 @@ fn run_app(tx: mpsc::Sender<Server>) -> std::io::Result<()> {
     sys.block_on(srv)
 }
 
+async fn spawn_bot(bot: LichessBot){
+    tokio::spawn(async move {
+        let mut bot = bot;
+
+        println!("starting bot");
+
+        let _ = bot.stream().await;
+    });
+}
+
 #[tokio::main]
 async fn main() {
-    std::env::set_var("RUST_LOG", "actix_web=info,actix_server=trace");
-    //env_logger::init();
+    //std::env::set_var("RUST_LOG", "actix_web=info,actix_server=trace");
+    env_logger::init();
 
     let (tx, rx) = mpsc::channel();
 
@@ -66,10 +76,18 @@ async fn main() {
 
     let srv = rx.recv().unwrap();
 
-    println!("WAITING 10 SECONDS");
-    thread::sleep(time::Duration::from_secs(20));
+    let mut bot = LichessBot::new();
+
+    //let spawn_bot_result = spawn_bot(bot).await;
+
+    //println!("spawn bot result {:?}", spawn_bot_result);
+
+    let _ = bot.stream().await;
+
+    /*println!("WAITING 10 SECONDS");
+    thread::sleep(time::Duration::from_secs(40));
 
     println!("STOPPING SERVER");
     // init stop server and wait until server gracefully exit
-    rt::System::new("").block_on(srv.stop(true));
+    rt::System::new("").block_on(srv.stop(true));*/
 }
