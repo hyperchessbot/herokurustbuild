@@ -8,5 +8,5 @@ git add . -A
 
 git commit -m "$*"
 
-git push https://hyperchessbot:$GITHUB_PUSH_TOKEN@github.com/hyperchessbot/herokurustbuild.git actixtest
-git push https://hyperchessbot:$GITLAB_PUSH_TOKEN@gitlab.com/hyperchessbotauthor/herokurustbuild actixtest
+git push https://hyperchessbot:$GITHUB_PUSH_TOKEN@github.com/hyperchessbot/herokurustbuild.git actixtestbeta
+git push https://hyperchessbot:$GITLAB_PUSH_TOKEN@gitlab.com/hyperchessbotauthor/herokurustbuild actixtestbeta

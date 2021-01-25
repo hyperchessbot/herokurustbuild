@@ -1,4 +1,4 @@
-use log::{log_enabled, info, Level};
+/*use log::{log_enabled, info, Level};
 
 use std::sync::mpsc;
 use std::{thread, time};
@@ -85,11 +85,48 @@ async fn main() {
 
     let _ = spawn_bot(bot).await;
 
-    thread::sleep(time::Duration::from_secs(40));
+    //thread::sleep(time::Duration::from_secs(40));
+
+    tokio::time::sleep(tokio::time::Duration::from_secs(40)).await;
 
     if log_enabled!(Level::Info){
         info!("shutting down server");
     }
 
     rt::System::new("").block_on(srv.stop(true));
+}
+*/
+
+use std::time::Duration;
+
+use actix_web::{get, App, HttpServer};
+
+fn main() -> std::io::Result<()> {
+    let tokio_rt = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()?;
+
+    tokio_rt.spawn(async {
+        actix_web::rt::time::sleep(Duration::from_secs(1)).await;
+        println!("tokio spawn");
+    });
+
+    let server = actix_web::rt::System::new("abc").block_on(async {
+       let server = HttpServer::new(|| App::new().service(index))
+            .disable_signals()
+            .bind("127.0.0.1:8000")?
+            .run();
+        Ok::<_, std::io::Error>(server)
+    })?;
+
+    tokio_rt.block_on(async move {
+        let _ = tokio::signal::ctrl_c().await;
+        let _ = server.stop(true).await;
+        Ok(())
+    })
+}
+
+#[get("/")]
+async fn index() -> &'static str {
+    "Hello World!"
 }
