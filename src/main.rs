@@ -16,12 +16,40 @@ const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
 /// How long before lack of client response causes a timeout
 const CLIENT_TIMEOUT: Duration = Duration::from_secs(10);
 
+#[derive(Message, Debug)]
+#[rtype(result = "()")]
+struct LogMsg(String);
+
+struct LogManager {
+    client_addrs: Vec<Addr<MyWebSocket>>,
+}
+
+impl Handler<LogMsg> for MyWebSocket {
+    type Result = ();
+
+    fn handle(&mut self, msg: LogMsg, ctx: &mut Self::Context) {
+        let LogMsg(msg) = msg;
+        println!("received {}", msg);
+
+        ctx.text(msg);
+    }
+}
+
+impl LogManager {
+    fn new() -> LogManager {
+        LogManager {
+            client_addrs: vec!(),
+        }
+    }
+}
+
 /// websocket connection is long running connection, it easier
 /// to handle with an actor
 struct MyWebSocket {
     /// Client must send ping at least once per 10 seconds (CLIENT_TIMEOUT),
     /// otherwise we drop connection.
     hb: Instant,
+    log_man: web::Data<std::sync::Mutex::<LogManager>>,
 }
 
 impl Actor for MyWebSocket {
@@ -30,6 +58,12 @@ impl Actor for MyWebSocket {
     /// Method is called on actor start. We start the heartbeat process here.
     fn started(&mut self, ctx: &mut Self::Context) {
         self.hb(ctx);
+
+        let addr = ctx.address();
+
+        let mut log_man = self.log_man.lock().unwrap();
+
+        log_man.client_addrs.push(addr);
     }
 }
 
@@ -62,8 +96,11 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for MyWebSocket {
 }
 
 impl MyWebSocket {
-    fn new() -> Self {
-        Self { hb: Instant::now() }
+    fn new(log_man: web::Data<std::sync::Mutex::<LogManager>>) -> Self {
+        Self {
+            hb: Instant::now(),
+            log_man: log_man,
+        }
     }
 
     /// helper method that sends ping to client every second.
@@ -90,15 +127,28 @@ impl MyWebSocket {
 
 
 /// do websocket handshake and start `MyWebSocket` actor
-async fn ws_index(r: HttpRequest, stream: web::Payload) -> Result<HttpResponse, Error> {
-    println!("{:?}", r);
-    let res = ws::start(MyWebSocket::new(), &r, stream);
+async fn ws_index(
+        r: HttpRequest,
+        stream: web::Payload,
+        log_man: web::Data<std::sync::Mutex::<LogManager>>
+    ) -> Result<HttpResponse, Error> {
+    println!("{:?}", r);        
+    let res = ws::start(MyWebSocket::new(log_man), &r, stream);
     println!("{:?}", res);
     res
 }
 
 #[get("/")]
-async fn index(bot_state: web::Data::<std::sync::Arc<tokio::sync::Mutex<BotState>>>) -> impl Responder {
+async fn index(
+    bot_state: web::Data::<std::sync::Arc<tokio::sync::Mutex<BotState>>>,
+    log_man: web::Data<std::sync::Mutex::<LogManager>>,
+) -> impl Responder {
+    let data = log_man.lock().unwrap();
+
+    for addr in &data.client_addrs {
+        addr.do_send(LogMsg(format!("{:?}", bot_state)));
+    }
+
     format!("Bot state : {:?}", bot_state)
 }
 
@@ -111,6 +161,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>>{
     let bot = Box::leak(Box::new(LichessBot::new().enable_casual(true)));
     
     let bot_data = web::Data::new(bot.state.clone());
+
+    let log_man = web::Data::new(std::sync::Mutex::new(LogManager::new()));
     
     let spawn_result = tokio::spawn(async move {
         if log_enabled!(Level::Info){
@@ -125,6 +177,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>>{
         .service(web::resource("/ws/").route(web::get().to(ws_index)))
         .service(fs::Files::new("/ws", "static/").index_file("index.html"))
         .app_data(bot_data.clone())
+        .app_data(log_man.clone())
         .service(index)
     )            
     .disable_signals()            
