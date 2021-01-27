@@ -4,22 +4,28 @@
 use std::time::{Duration, Instant};
 
 use actix::prelude::*;
-use actix_web::{get, App, HttpServer, web, Responder, middleware, Error, HttpRequest, HttpResponse};
+use actix_web::{web, middleware, get, App, HttpServer, Responder, Error, HttpRequest, HttpResponse};
 use actix_files as fs;
 use actix_web_actors::ws;
 
-use log::{log_enabled, error, info, Level, Record, Metadata, set_logger, set_max_level, LevelFilter};
+use log::{log_enabled, error, info, Level, LevelFilter, Record, Metadata, set_logger, set_max_level};
 
 use lichessbot::lichessbot::*;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
+// config
 
 /// how often heartbeat pings are sent
-const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
+const HEARTBEAT_INTERVAL: Duration     = Duration::from_secs(5);
 /// how long before lack of client response causes a timeout
-const CLIENT_TIMEOUT: Duration = Duration::from_secs(10);
+const CLIENT_TIMEOUT: Duration         = Duration::from_secs(10);
 /// websocket clients queue capacity
-const MAX_WEBSOCKET_CLIENTS: usize = 10;
+const MAX_WEBSOCKET_CLIENTS: usize     = 10;
+/// kickstart queue capacity, at most this many old log messages are stored
+const KICKSTART_QUEUE_CAPACITY: usize  = 20;
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+// models and implementation
 
 /// log message to be sent to weblogger
 #[derive(Message, Debug)]
@@ -28,6 +34,9 @@ struct LogMsg(String);
 
 /// log manager that has all the client websocket addresses
 struct LogManager {
+    /// old messages
+    kickstart: std::collections::VecDeque<LogMsg>,
+    /// client websocket adresses
     client_addrs: std::collections::VecDeque<Addr<MyWebSocket>>,
 }
 
@@ -49,6 +58,7 @@ impl LogManager {
     /// create neew log manager
     fn new() -> LogManager {
         LogManager {
+            kickstart: std::collections::VecDeque::new(),
             client_addrs: std::collections::VecDeque::new(),
         }
     }
@@ -103,11 +113,19 @@ impl log::Log for WebLogger {
         println!("{}", formatted);
 
         // get mutable refernce to log manager
-        let data = self.log_man.lock().unwrap();
+        let mut log_man = self.log_man.lock().unwrap();
 
         // send log to websockets
-        for addr in data.client_addrs.iter() {
+        for addr in log_man.client_addrs.iter() {
             addr.do_send(LogMsg(format!("{}", formatted)));
+        }
+
+        // push back log message
+        log_man.kickstart.push_back(LogMsg(format!("{}", formatted)));
+
+        // limit kickstart queue size
+        while log_man.kickstart.len() > KICKSTART_QUEUE_CAPACITY {
+            let _ = log_man.kickstart.pop_front();
         }
     }
 
@@ -132,10 +150,12 @@ impl Actor for MyWebSocket {
     /// specify context as websocket context
     type Context = ws::WebsocketContext<Self>;
 
-    /// start heartbeat on actor start
+    /// handle started
     fn started(&mut self, ctx: &mut Self::Context) {
+        // start heartbeat on actor start
         self.hb(ctx);
 
+        // determine actor address
         let addr = ctx.address();
 
         // get mutable reference to log manager
@@ -147,6 +167,15 @@ impl Actor for MyWebSocket {
         // limit number of client adresses stored
         while log_man.client_addrs.len() > MAX_WEBSOCKET_CLIENTS {
             log_man.client_addrs.pop_front();
+        }
+
+        // send kickstart
+        for log_msg in log_man.kickstart.iter() {
+            // obtain message
+            let LogMsg(msg) = log_msg;
+
+            // send message
+            ctx.text(format!("{}", msg));
         }
     }
 }
@@ -187,14 +216,14 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for MyWebSocket {
 /// websocket implementation
 impl MyWebSocket {
     /// create new websocket
-    fn new(log_man: web::Data<std::sync::Mutex::<LogManager>>) -> Self {
-        Self {
+    fn new(log_man: web::Data<std::sync::Mutex::<LogManager>>) -> MyWebSocket {
+        MyWebSocket {
             hb: Instant::now(),
             log_man: log_man,
         }
     }
 
-    /// heartbeat method, sends ping to client every second
+    /// heartbeat method, sends ping to client at HEARTBEAT_INTERVAL
     /// checks heartbeats from client
     fn hb(&self, ctx: &mut <Self as Actor>::Context) {
         ctx.run_interval(HEARTBEAT_INTERVAL, |act, ctx| {
@@ -235,12 +264,15 @@ async fn ws_index(
 async fn index(
     bot_state: web::Data::<std::sync::Arc<tokio::sync::Mutex<BotState>>>,    
 ) -> impl Responder {
-    // get mutable refernce bot state manager
-    let data = bot_state.lock().await;
+    // get reference to bot state
+    let bot_state = bot_state.lock().await;
 
     // send response
-    HttpResponse::Ok().content_type("text/html").body(format!("{:?}<hr><a href='/ws'>web logger</a>", data))    
+    HttpResponse::Ok().content_type("text/html").body(format!("{:?}<hr><a href='/ws'>web logger</a>", bot_state))    
 }
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+// app entry point
 
 /// actix web main
 #[actix_web::main]
@@ -258,7 +290,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>>{
     let level_filter = level_str_to_error_level_filter(std::env::var("RUST_LOG").unwrap_or("off".to_string()));
 
     // always print logging level, even if logging is turned off
-    println!("application started, logging level = {}", level_filter);
+    println!("lichessbot startup, logging level = {}", level_filter);
 
     // set max logging level
     set_max_level(level_filter);
@@ -267,9 +299,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>>{
     let bot = Box::leak(Box::new(
         LichessBot::new()
         .uci_opt("Move Overhead", std::env::var("RUST_BOT_ENGINE_MOVE_OVERHEAD").unwrap_or("500".to_string()))
-		.uci_opt("Threads", std::env::var("RUST_BOT_ENGINE_THREADS").unwrap_or("4".to_string()))
-		.uci_opt("Hash", std::env::var("RUST_BOT_ENGINE_HASH").unwrap_or("128".to_string()))
-		.uci_opt("Contempt", std::env::var("RUST_BOT_ENGINE_CONTEMPT").unwrap_or("-25".to_string()))
+        .uci_opt("Threads", std::env::var("RUST_BOT_ENGINE_THREADS").unwrap_or("4".to_string()))
+        .uci_opt("Hash", std::env::var("RUST_BOT_ENGINE_HASH").unwrap_or("128".to_string()))
+        .uci_opt("Contempt", std::env::var("RUST_BOT_ENGINE_CONTEMPT").unwrap_or("-25".to_string()))
         .enable_casual(true)
     ));
     
@@ -314,5 +346,5 @@ async fn main() -> Result<(), Box<dyn std::error::Error>>{
     }
     
     // done
-	Ok(())
+    Ok(())
 }
