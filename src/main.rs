@@ -74,7 +74,9 @@ impl log::Log for WebLogger {
     fn log(&self, record: &Record) {
         let data = self.log_man.lock().unwrap();
 
-        let formatted = format!("< file {:?} > [ module {:?} ] : {}", record.file(), record.module_path(), record.args());
+        let time = chrono::Utc::now().naive_local();
+
+        let formatted = format!("{:?} : < file {:?} > [ module {:?} ] : {}", time, record.file(), record.module_path(), record.args());
 
         println!("{}", formatted);
 

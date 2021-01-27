@@ -1190,6 +1190,7 @@ dependencies = [
  "actix-web-actors",
  "awc 2.0.3",
  "bytes 0.5.6",
+ "chrono",
  "env_logger",
  "futures",
  "lichessbot",
