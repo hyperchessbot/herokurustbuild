@@ -239,7 +239,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>>{
     let port = std::env::var("PORT").unwrap_or("8080".to_string());
 
     // create static bot
-    let bot = Box::leak(Box::new(LichessBot::new().enable_casual(true)));
+    let bot = Box::leak(Box::new(
+        LichessBot::new()
+        .uci_opt("Move Overhead", std::env::var("RUST_BOT_ENGINE_MOVE_OVERHEAD").unwrap_or("500".to_string()))
+		.uci_opt("Threads", std::env::var("RUST_BOT_ENGINE_THREADS").unwrap_or("4".to_string()))
+		.uci_opt("Hash", std::env::var("RUST_BOT_ENGINE_HASH").unwrap_or("128".to_string()))
+		.uci_opt("Contempt", std::env::var("RUST_BOT_ENGINE_CONTEMPT").unwrap_or("-25".to_string()))
+        .enable_casual(true)
+    ));
     
     // create web date for bot state
     let bot_data = web::Data::new(bot.state.clone());
