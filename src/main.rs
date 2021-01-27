@@ -5,7 +5,7 @@ use actix_web::{get, App, HttpServer, web, Responder, middleware, Error, HttpReq
 use actix_files as fs;
 use actix_web_actors::ws;
 
-use log::{log_enabled, info, Level};
+use log::{log_enabled, error, info, Level, Record, Metadata, set_logger, set_max_level, LevelFilter};
 
 extern crate env_logger;
 
@@ -29,7 +29,6 @@ impl Handler<LogMsg> for MyWebSocket {
 
     fn handle(&mut self, msg: LogMsg, ctx: &mut Self::Context) {
         let LogMsg(msg) = msg;
-        println!("received {}", msg);
 
         ctx.text(msg);
     }
@@ -41,6 +40,36 @@ impl LogManager {
             client_addrs: vec!(),
         }
     }
+}
+
+struct WebLogger {
+    log_man: web::Data<std::sync::Mutex::<LogManager>>,
+}
+
+impl WebLogger {
+    fn new(log_man: web::Data<std::sync::Mutex::<LogManager>>) -> WebLogger {
+        WebLogger {
+            log_man: log_man,
+        }
+    }
+}
+
+impl log::Log for WebLogger {
+    fn enabled(&self, _: &Metadata) -> bool {
+        true
+    }
+
+    fn log(&self, record: &Record) {
+        let data = self.log_man.lock().unwrap();
+
+        println!(">> {}", record.args());
+
+        for addr in &data.client_addrs {
+            addr.do_send(LogMsg(format!(">> {}", record.args())));
+        }
+    }
+
+    fn flush(&self) {}
 }
 
 /// websocket connection is long running connection, it easier
@@ -74,8 +103,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for MyWebSocket {
         msg: Result<ws::Message, ws::ProtocolError>,
         ctx: &mut Self::Context,
     ) {
-        // process websocket messages
-        println!("WS: {:?}", msg);
+        // process websocket messages        
         match msg {
             Ok(ws::Message::Ping(msg)) => {
                 self.hb = Instant::now();
@@ -111,7 +139,9 @@ impl MyWebSocket {
             // check client heartbeats
             if Instant::now().duration_since(act.hb) > CLIENT_TIMEOUT {
                 // heartbeat timed out
-                println!("Websocket Client heartbeat failed, disconnecting!");
+                if log_enabled!(Level::Error) {
+                    error!("Websocket Client heartbeat failed, disconnecting!");
+                }                
 
                 // stop actor
                 ctx.stop();
@@ -131,10 +161,8 @@ async fn ws_index(
         r: HttpRequest,
         stream: web::Payload,
         log_man: web::Data<std::sync::Mutex::<LogManager>>
-    ) -> Result<HttpResponse, Error> {
-    println!("{:?}", r);        
-    let res = ws::start(MyWebSocket::new(log_man), &r, stream);
-    println!("{:?}", res);
+    ) -> Result<HttpResponse, Error> {    
+    let res = ws::start(MyWebSocket::new(log_man), &r, stream);    
     res
 }
 
@@ -154,7 +182,7 @@ async fn index(
 
 #[actix_web::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>>{
-    env_logger::init();
+    //env_logger::init();
     
     let port = std::env::var("PORT").unwrap_or("8080".to_string());
 
@@ -163,6 +191,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>>{
     let bot_data = web::Data::new(bot.state.clone());
 
     let log_man = web::Data::new(std::sync::Mutex::new(LogManager::new()));
+
+    let web_logger = Box::leak(Box::new(WebLogger::new(log_man.clone())));
+
+    let _ = set_logger(web_logger);
+
+    set_max_level(LevelFilter::Trace);
+
+    info!("logger set");
     
     let spawn_result = tokio::spawn(async move {
         if log_enabled!(Level::Info){
@@ -189,7 +225,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>>{
     if let Ok((tx, mut rxa)) = spawn_result {
         let _ = tx.send("stopped by user".to_string()).await;
 
-	    println!("{:?}", rxa.recv().await);
+        if log_enabled!(Level::Error) {
+            error!("{:?}", rxa.recv().await);
+        }	    
     }
 	
 	Ok(())
