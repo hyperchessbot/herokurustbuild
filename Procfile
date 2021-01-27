@@ -1,1 +1,1 @@
-web: ./target/release/hello
+web: bash startbot.sh
