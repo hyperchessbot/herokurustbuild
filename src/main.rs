@@ -1,3 +1,6 @@
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+// imports
+
 use std::time::{Duration, Instant};
 
 use actix::prelude::*;
@@ -8,6 +11,8 @@ use actix_web_actors::ws;
 use log::{log_enabled, error, info, Level, Record, Metadata, set_logger, set_max_level, LevelFilter};
 
 use lichessbot::lichessbot::*;
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /// how often heartbeat pings are sent
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
@@ -28,6 +33,7 @@ struct LogManager {
 
 /// message handler for websocket
 impl Handler<LogMsg> for MyWebSocket {
+    /// result type
     type Result = ();
 
     /// handle log message
