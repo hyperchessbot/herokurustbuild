@@ -9,7 +9,7 @@
       var conn = null;
       function log(msg) {
         var control = $('#log');
-        control.val(msg + "\n" + control.val());
+        control.val(control.val() + msg + "\n");
         control.scrollTop(control.scrollTop() + 1000);
       }
       function connect() {
