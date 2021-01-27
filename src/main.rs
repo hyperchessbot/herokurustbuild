@@ -235,6 +235,24 @@ async fn index(
 /// actix web main
 #[actix_web::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>>{
+    // create log manager wrapped in web data
+    let log_man = web::Data::new(std::sync::Mutex::new(LogManager::new()));
+
+    // create static web logger
+    let web_logger = Box::leak(Box::new(WebLogger::new(log_man.clone())));
+
+    // set logger
+    let _ = set_logger(web_logger);
+
+    // get level filter from RUST_LOG env var
+    let level_filter = level_str_to_error_level_filter(std::env::var("RUST_LOG").unwrap_or("off".to_string()));
+
+    // always print logging level, even if logging is turned off
+    println!("application started, logging level = {}", level_filter);
+
+    // set max logging level
+    set_max_level(level_filter);
+
     // determine port injected by cloud provider or use 8080 for local development
     let port = std::env::var("PORT").unwrap_or("8080".to_string());
 
@@ -250,24 +268,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>>{
     
     // create web date for bot state
     let bot_data = web::Data::new(bot.state.clone());
-
-    // create log manager wrapped in web data
-    let log_man = web::Data::new(std::sync::Mutex::new(LogManager::new()));
-
-    // create static web logger
-    let web_logger = Box::leak(Box::new(WebLogger::new(log_man.clone())));
-
-    // set logger
-    let _ = set_logger(web_logger);
-
-    // get level filter from RUST_LOG env var
-    let level_filter = level_str_to_error_level_filter(std::env::var("RUST_LOG").unwrap_or("off".to_string()));
-
-    // always print logging level, even if logging is turned off
-    println!("logging level {}", level_filter);
-
-    // set max logging level
-    set_max_level(level_filter);
     
     // spawn bot
     let spawn_result = tokio::spawn(async move {
