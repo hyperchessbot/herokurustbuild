@@ -9,7 +9,7 @@
       var conn = null;
       function log(msg) {
         var control = $('#log');
-        control.html(control.html() + msg + '<br/>');
+        control.val(msg + "\n" + control.val());
         control.scrollTop(control.scrollTop() + 1000);
       }
       function connect() {
@@ -41,10 +41,10 @@
       function update_ui() {
         var msg = '';
         if (conn == null) {
-          $('#status').text('disconnected');
+          $('#status').text('( - )');
           $('#connect').html('Connect');
         } else {
-          $('#status').text('connected (' + conn.protocol + ')');
+          $('#status').text('(' + ( conn.protocol || " + " ) + ')');
           $('#connect').html('Disconnect');
         }
       }
@@ -74,14 +74,13 @@
 </script>
 </head>
 <body>
-<h3>Chat!</h3>
 <div>
-  <button id="connect">Connect</button>&nbsp;|&nbsp;Status:
-  <span id="status">disconnected</span>
+  <button id="connect">Connect</button>&nbsp;
+  <span id="status">( - )</span>
 </div>
-<div id="log"
-     style="width:20em;height:15em;overflow:auto;border:1px solid black">
-</div>
+<hr>
+<textarea id="log" style="width:99%;height:400px;padding-left: 5px;"></textarea>
+<hr>
 <form id="chatform" onsubmit="return false;">
   <input id="text" type="text" />
   <input id="send" type="button" value="Send" />

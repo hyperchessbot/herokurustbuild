@@ -74,10 +74,12 @@ impl log::Log for WebLogger {
     fn log(&self, record: &Record) {
         let data = self.log_man.lock().unwrap();
 
-        println!(">> {}", record.args());
+        let formatted = format!("< file {:?} > [ module {:?} ] : {}", record.file(), record.module_path(), record.args());
+
+        println!("{}", formatted);
 
         for addr in &data.client_addrs {
-            addr.do_send(LogMsg(format!(">> {}", record.args())));
+            addr.do_send(LogMsg(format!("{}", formatted)));
         }
     }
 
