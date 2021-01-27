@@ -253,9 +253,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>>{
     // set max logging level
     set_max_level(level_filter);
 
-    // determine port injected by cloud provider or use 8080 for local development
-    let port = std::env::var("PORT").unwrap_or("8080".to_string());
-
     // create static bot
     let bot = Box::leak(Box::new(
         LichessBot::new()
@@ -266,7 +263,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>>{
         .enable_casual(true)
     ));
     
-    // create web date for bot state
+    // create web data for bot state
     let bot_data = web::Data::new(bot.state.clone());
     
     // spawn bot
@@ -277,6 +274,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>>{
 
         bot.stream().await
     }).await;
+
+    // determine port injected by cloud provider or use 8080 for local development
+    let port = std::env::var("PORT").unwrap_or("8080".to_string());
 
     // spawn server
     HttpServer::new(move || App::new()
