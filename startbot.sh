@@ -7,6 +7,12 @@ chmod +x stockfish12
 # download book
 wget https://raw.githubusercontent.com/hyperchessbot/pgnrepo/main/rustbot.pgn -O book.pgn
 
+# list release
+ls target/release -al
+
+# copy executable
+cp target/release/hello ./rustbot
+
 # list files
 ls -al
 
@@ -16,7 +22,7 @@ RESTART="${RESTART:-1800}"
 # run bot
 while true; do
 	echo "starting bot with restart interval $RESTART"
-	./target/release/hello &
+	./rustbot &
 	sleep $RESTART
 	echo "shutting down bot"
 	kill $!
