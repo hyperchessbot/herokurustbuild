@@ -1,3 +1,5 @@
 target/
 
+*.pgn
+
 stockfish12
