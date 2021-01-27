@@ -55,7 +55,7 @@ impl Handler<LogMsg> for MyWebSocket {
 
 /// implementation of log manager
 impl LogManager {
-    /// create neew log manager
+    /// create new log manager
     fn new() -> LogManager {
         LogManager {
             kickstart: std::collections::VecDeque::new(),
@@ -65,6 +65,7 @@ impl LogManager {
 }
 
 /// web logger, holds a mutex protected log manager
+/// has to be separate from log manager, because set_logger consumes it
 struct WebLogger {    
     /// log manager
     log_man: web::Data<std::sync::Mutex::<LogManager>>,
@@ -97,6 +98,7 @@ impl WebLogger {
 impl log::Log for WebLogger {
     /// determine if logging is enabled
     fn enabled(&self, _: &Metadata) -> bool {
+        // always return true and let set_max_level do the job
         true
     }
 
