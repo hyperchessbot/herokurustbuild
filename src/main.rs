@@ -42,13 +42,25 @@ impl LogManager {
     }
 }
 
-struct WebLogger {
+struct WebLogger {    
     log_man: web::Data<std::sync::Mutex::<LogManager>>,
+}
+
+fn level_str_to_error_level_filter<T: AsRef<str>>(level: T) -> LevelFilter {
+    match level.as_ref() {
+        "off" => LevelFilter::Off,
+        "error" => LevelFilter::Error,
+        "warn" => LevelFilter::Warn,
+        "info" => LevelFilter::Info,
+        "debug" => LevelFilter::Debug,
+        "trace" => LevelFilter::Trace,
+        _ => LevelFilter::Off,
+    }
 }
 
 impl WebLogger {
     fn new(log_man: web::Data<std::sync::Mutex::<LogManager>>) -> WebLogger {
-        WebLogger {
+        WebLogger {            
             log_man: log_man,
         }
     }
@@ -196,7 +208,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>>{
 
     let _ = set_logger(web_logger);
 
-    set_max_level(LevelFilter::Trace);
+    let level_filter = level_str_to_error_level_filter(std::env::var("RUST_LOG").unwrap_or("off".to_string()));
+
+    println!("logging level {}", level_filter);
+
+    set_max_level(level_filter);
 
     info!("logger set");
     
