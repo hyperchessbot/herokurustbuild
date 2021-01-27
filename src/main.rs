@@ -56,6 +56,7 @@ impl LogManager {
 
 /// web logger, holds a mutex protected log manager
 struct WebLogger {    
+    /// log manager
     log_man: web::Data<std::sync::Mutex::<LogManager>>,
 }
 
@@ -74,6 +75,7 @@ fn level_str_to_error_level_filter<T: AsRef<str>>(level: T) -> LevelFilter {
 
 /// web logger implementation
 impl WebLogger {
+    /// create new web logger
     fn new(log_man: web::Data<std::sync::Mutex::<LogManager>>) -> WebLogger {
         WebLogger {            
             log_man: log_man,
@@ -116,10 +118,12 @@ impl log::Log for WebLogger {
 }
 
 /// actor to handle websocket connection
+/// client must send ping at least once in every CLIENT_TIMEOUT seconds
+/// otherwise drop connection
 struct MyWebSocket {
-    /// client must send ping at least once in every CLIENT_TIMEOUT seconds
-    /// otherwise drop connection
+    /// last heartbeat instant
     hb: Instant,
+    /// log manager
     log_man: web::Data<std::sync::Mutex::<LogManager>>,
 }
 
