@@ -1121,9 +1121,9 @@ checksum = "89203f3fba0a3795506acaad8ebce3c80c0af93f994d5a1d7a0b1eeb23271929"
 
 [[package]]
 name = "lichessbot"
-version = "0.1.31"
+version = "0.1.33"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f0c406c39c16c2944e184d1b17931768ac9690ec9b1d3db14ffa0a52abd8f101"
+checksum = "2a9ca9978d102fb83ec77c19c97dae8e18e767edfd861a68f26b8b5b1de6e39f"
 dependencies = [
  "bytes 1.0.1",
  "dotenv",
@@ -1140,9 +1140,9 @@ dependencies = [
 
 [[package]]
 name = "licoricedev"
-version = "0.1.1"
+version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7e7d82ff508d48bfe5f7250bdc90e35218aa48c39d70d5bf80495c94588341ef"
+checksum = "cb3fa9004d29e4f00c80c2b516227118f6b73307cde451ce32ae0cf36ceb6ffd"
 dependencies = [
  "bytes 1.0.1",
  "chrono",
