@@ -11,6 +11,7 @@ use actix_web_actors::ws;
 use log::{log_enabled, error, info, Level, LevelFilter, Record, Metadata, set_logger, set_max_level};
 
 use serde::{Serialize, Deserialize};
+use colored::*;
 
 use lichessbot::lichessbot::*;
 
@@ -64,7 +65,7 @@ impl Handler<LogMsg> for MyWebSocket {
 
     /// handle log message
     fn handle(&mut self, msg: LogMsg, ctx: &mut Self::Context) {
-        ctx.text(msg.formatted);
+        ctx.text(msg.to_json());
     }
 }
 
@@ -123,8 +124,12 @@ impl log::Log for WebLogger {
         let naive_time = chrono::Utc::now().naive_local();
 
         // formatted log
-        let formatted = format!("{:?} : < file {:?} > [ module {:?} ] : {}",
-            naive_time, record.file(), record.module_path(), record.args());
+        let formatted = format!("{} : < {} > [ {} ] : {}",
+            format!("{:?}", naive_time).blue(),
+            record.file().map_or("-".to_string(), |s| s.to_string().magenta().to_string()),
+            record.module_path().map_or("-".to_string(), |s| s.to_string().cyan().to_string()),
+            format!("{}", record.args()).yellow()
+        );
 
         // print log to stdout
         println!("{}", formatted);
@@ -298,7 +303,7 @@ async fn index(
 
 /// actix web main
 #[actix_web::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>>{
+async fn main() -> Result<(), Box<dyn std::error::Error>>{    
     // create log manager wrapped in web data
     let log_man = web::Data::new(std::sync::Mutex::new(LogManager::new()));
 
