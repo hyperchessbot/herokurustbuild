@@ -35,6 +35,7 @@ const KICKSTART_QUEUE_CAPACITY: usize  = 20;
 #[rtype(result = "()")]
 #[serde(rename_all = "camelCase")]
 pub struct LogMsg {
+    pub level: String,
     pub naive_time: String,
     pub file: Option<String>,
     pub module_path: Option<String>,
@@ -100,6 +101,18 @@ fn level_str_to_error_level_filter<T: AsRef<str>>(level: T) -> LevelFilter {
     }
 }
 
+/// colored level filter
+fn colored_level_filter(level_filter: LevelFilter) -> String {
+    match level_filter {
+        LevelFilter::Off => "OFF".red(),
+        LevelFilter::Error => "ERROR".red(),
+        LevelFilter::Warn => "WARN".yellow(),
+        LevelFilter::Info => "INFO".green(),
+        LevelFilter::Debug => "DEBUG".blue(),
+        LevelFilter::Trace => "TRACE".magenta(),
+    }.to_string()
+}
+
 /// web logger implementation
 impl WebLogger {
     /// create new web logger
@@ -124,8 +137,9 @@ impl log::Log for WebLogger {
         let naive_time = chrono::Utc::now().naive_local();
 
         // formatted log
-        let formatted = format!("{} : < {} > [ {} ] : {}",
+        let formatted = format!("{} {} : < {} > [ {} ] : {}",            
             format!("{:?}", naive_time).blue(),
+            colored_level_filter(record.level().to_level_filter()),
             record.file().map_or("-".to_string(), |s| s.to_string().magenta().to_string()),
             record.module_path().map_or("-".to_string(), |s| s.to_string().cyan().to_string()),
             format!("{}", record.args()).yellow()
@@ -135,6 +149,7 @@ impl log::Log for WebLogger {
         println!("{}", formatted);
 
         let log_msg = LogMsg {
+            level: format!("{:?}", record.level()),
             naive_time: format!("{}", naive_time),
             file: record.file().map(String::from),
             module_path: record.module_path().map(String::from),
@@ -317,7 +332,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>>{
     let level_filter = level_str_to_error_level_filter(std::env::var("RUST_LOG").unwrap_or("off".to_string()));
 
     // always print logging level, even if logging is turned off
-    println!("lichessbot startup, logging level = {}", level_filter);
+    println!("lichessbot startup, logging level = {}", colored_level_filter(level_filter));
 
     // set max logging level
     set_max_level(level_filter);
