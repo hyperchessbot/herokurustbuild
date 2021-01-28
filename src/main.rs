@@ -10,6 +10,8 @@ use actix_web_actors::ws;
 
 use log::{log_enabled, error, info, Level, LevelFilter, Record, Metadata, set_logger, set_max_level};
 
+use serde::{Serialize, Deserialize};
+
 use lichessbot::lichessbot::*;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -28,9 +30,24 @@ const KICKSTART_QUEUE_CAPACITY: usize  = 20;
 // models and implementation
 
 /// log message to be sent to weblogger
-#[derive(Message, Debug)]
+#[derive(Message, Debug, Clone, Serialize, Deserialize)]
 #[rtype(result = "()")]
-struct LogMsg(String);
+#[serde(rename_all = "camelCase")]
+pub struct LogMsg {
+    pub naive_time: String,
+    pub file: Option<String>,
+    pub module_path: Option<String>,
+    pub msg: String,
+    pub formatted: String
+}
+
+/// log message implementation
+impl LogMsg {
+    /// convert to json string
+    pub fn to_json(&self) -> String {
+        serde_json::to_string(self).unwrap()
+    }
+}
 
 /// log manager that has all the client websocket addresses
 struct LogManager {
@@ -47,9 +64,7 @@ impl Handler<LogMsg> for MyWebSocket {
 
     /// handle log message
     fn handle(&mut self, msg: LogMsg, ctx: &mut Self::Context) {
-        let LogMsg(msg) = msg;
-
-        ctx.text(msg);
+        ctx.text(msg.formatted);
     }
 }
 
@@ -105,25 +120,33 @@ impl log::Log for WebLogger {
     /// do actual logging
     fn log(&self, record: &Record) {
         // get naive time
-        let time = chrono::Utc::now().naive_local();
+        let naive_time = chrono::Utc::now().naive_local();
 
         // formatted log
         let formatted = format!("{:?} : < file {:?} > [ module {:?} ] : {}",
-            time, record.file(), record.module_path(), record.args());
+            naive_time, record.file(), record.module_path(), record.args());
 
         // print log to stdout
         println!("{}", formatted);
+
+        let log_msg = LogMsg {
+            naive_time: format!("{}", naive_time),
+            file: record.file().map(String::from),
+            module_path: record.module_path().map(String::from),
+            msg: format!("{}", record.args()),
+            formatted: format!("{}", formatted),
+        };
 
         // get mutable refernce to log manager
         let mut log_man = self.log_man.lock().unwrap();
 
         // send log to websockets
         for addr in log_man.client_addrs.iter() {
-            addr.do_send(LogMsg(format!("{}", formatted)));
+            addr.do_send(log_msg.clone());
         }
 
         // push back log message
-        log_man.kickstart.push_back(LogMsg(format!("{}", formatted)));
+        log_man.kickstart.push_back(log_msg);
 
         // limit kickstart queue size
         while log_man.kickstart.len() > KICKSTART_QUEUE_CAPACITY {
@@ -173,11 +196,8 @@ impl Actor for MyWebSocket {
 
         // send kickstart
         for log_msg in log_man.kickstart.iter() {
-            // obtain message
-            let LogMsg(msg) = log_msg;
-
             // send message
-            ctx.text(format!("{}", msg));
+            ctx.text(log_msg.to_json());
         }
     }
 }
