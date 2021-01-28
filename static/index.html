@@ -11,9 +11,24 @@
             $(function() {
                 var conn = null;
 
+                function msgToHtml(msgRaw) {
+                    try {
+                    let msg = JSON.parse(msgRaw)
+                    console.log("msg", msg)
+return `
+<div style="display:flex; font-family:monospace; align-items: center;">
+    <div style="color: blue;min-width: 230px;max-width: 230px;">${msg.naiveTime}</div>
+    <div style="text-align:center;background-color:#fff;font-weight:bold;min-width: 50px;max-width: 50px;color: green;">${msg.level.toUpperCase()}</div>
+    <div style="margin: 3px;margin-left:10px;padding: 3px;background-color: #333; color: yellow;mind-width: 800px;max-width: 800px;">${msg.msg}</div>
+</div>
+`                   }catch(err){
+                        return `<div style="color: blue;">${msgRaw}</div>`
+                    }
+                }
+
                 function log(msg) {
                     var control = $('#log');
-                    control.val(control.val() + msg + "\n");
+                    control.html(control.html() + msgToHtml(msg) + "\n");
                     control.scrollTop(control.scrollTop() + 1000);
                 }
 
@@ -26,8 +41,8 @@
                         log('Connected.');
                         update_ui();
                     };
-                    conn.onmessage = function(e) {
-                        log('Received: ' + e.data);
+                    conn.onmessage = function(e) {                        
+                        log(e.data);
                     };
                     conn.onclose = function() {
                         log('Disconnected.');
@@ -94,7 +109,7 @@
 
         <hr>
 
-        <textarea id="log" style="width:99%;height:400px;padding-left: 5px;"></textarea>
+        <div id="log" style="background-color:#aaa;padding: 5px;width:99%;height:400px;max-height:400px;overflow:scroll;padding-left: 5px;"></div>
 
         <hr>
 
