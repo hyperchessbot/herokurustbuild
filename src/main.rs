@@ -4,7 +4,7 @@
 use std::time::{Duration, Instant};
 
 use actix::prelude::*;
-use actix_web::{web, middleware, get, App, HttpServer, Responder, Error, HttpRequest, HttpResponse};
+use actix_web::{web, middleware, App, HttpServer, Error, HttpRequest, HttpResponse};
 use actix_files as fs;
 use actix_web_actors::ws;
 
@@ -301,18 +301,6 @@ async fn ws_index(
     res
 }
 
-/// index route
-#[get("/")]
-async fn index(
-    bot_state: web::Data::<std::sync::Arc<tokio::sync::Mutex<BotState>>>,    
-) -> impl Responder {
-    // get reference to bot state
-    let bot_state = bot_state.lock().await;
-
-    // send response
-    HttpResponse::Ok().content_type("text/html").body(format!("{:?}<hr><a href='/ws'>web logger</a>", bot_state))    
-}
-
 // favicon
 async fn favicon(_: HttpRequest) -> Result<fs::NamedFile, Error> {
     let path: std::path::PathBuf = "static/favicon.ico".parse().unwrap();
@@ -374,10 +362,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>>{
         .wrap(middleware::Logger::default())
         .route("/favicon.ico", web::get().to(favicon))
         .service(web::resource("/ws/").route(web::get().to(ws_index)))
-        .service(fs::Files::new("/ws", "static/").index_file("index.html"))
+        .service(fs::Files::new("/", "static/").index_file("index.html"))
         .app_data(bot_data.clone())
         .app_data(log_man.clone())
-        .service(index)
     )            
     .disable_signals()            
     .bind(format!("0.0.0.0:{}", port))?

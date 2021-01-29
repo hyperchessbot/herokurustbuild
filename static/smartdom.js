@@ -134,15 +134,17 @@ class LogItem_ extends SmartdomElement_{
         this.level = this.record.level || "Raw"
 
         this.timeDiv = div("time").html(this.record.timeFormatted || this.record.naiveTime || new Date(this.record.time).toLocaleString())
-        this.moduleDiv = div("module").html(this.record.modulePath || "")
-        this.levelDiv = div("level").html(this.level)
+        this.moduleDiv = div("module").html(this.record.modulePath || "")        
+        this.levelDiv = div("level").html(this.level)        
         this.msgDiv = div("msg").html(this.record.msg)
+        this.fileDiv = div("file").html(this.record.file || "")
+        this.msgContainerDiv = div("messagecont").a(this.msgDiv, this.fileDiv)
 
         this.ac("logitem", this.level.toLowerCase())
 
         this.timeAndModuleDiv = div("timeandmodule").a(this.timeDiv, this.moduleDiv)
 
-        this.container = div().as("display", "flex").as("align-items", "center").a(this.timeAndModuleDiv, this.levelDiv, this.msgDiv)
+        this.container = div().as("display", "flex").as("align-items", "center").a(this.timeAndModuleDiv, this.levelDiv, this.msgContainerDiv)
 
         this.as("display", "inline-block").a(this.container)
     }

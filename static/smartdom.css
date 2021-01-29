@@ -25,6 +25,17 @@
     color: #070;
 }
 
+.logitem .messagecont{
+    background-color: #ccc;
+    margin-left: 10px;
+}
+
+.logitem .file{
+    color: #007;
+    margin-left: 10px;
+    font-size: 10px;
+}
+
 .logitem .level {
     width: 50px;    
     margin: 1px;
@@ -33,14 +44,17 @@
     color: #000;
     padding: 1px;    
     text-align: center;
+    box-shadow: 5px 5px 4px 5px #888888;
 }
 
 .logitem.raw {
     background-color: #aaf;
+    font-weight: bold;
 }
 
 .logitem.error .level {
     color: #700;
+    font-weight: bold;
 }
 
 .logitem.warn .level {
@@ -60,10 +74,9 @@
 }
 
 .logitem .msg {    
-    width: 899px;
-    font-weight: bold;
+    width: 889px;    
     margin: 1px;
-    margin-left: 5px;
+    margin-left: 1px;
     background-color: #333;
     color: #ff0;
     padding: 5px;    
@@ -72,11 +85,13 @@
 .logitem.raw .msg {
     background-color: #ffa;
     color: #00f;
+    font-weight: bold;
 }
 
 .logitem.error .msg {
     background-color: #ffa;
     color: #f00;
+    font-weight: bold;
 }
 
 .log {
