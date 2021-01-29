@@ -1,7 +1,7 @@
 class SmartdomElement_ {
     // delete childs
     x(){
-        this.innerHTML = ""
+        this.html("")
         return this
     }
 
@@ -133,8 +133,6 @@ class LogItem_ extends SmartdomElement_{
 
         this.level = this.record.level || "Raw"
 
-        console.log(this.record)
-
         this.timeDiv = div("time").html(this.record.timeFormatted || this.record.naiveTime || new Date(this.record.time).toLocaleString())
         this.moduleDiv = div("module").html(this.record.modulePath || "")
         this.levelDiv = div("level").html(this.level)
@@ -159,16 +157,43 @@ class Logger_ extends SmartdomElement_{
         this.ac("log")
 
         this.config = {
-            capacity: this.config.capacity || 50
+            capacity: this.config.capacity || 50,
+            delay: this.config.delay || 1000,
         }
 
         this.items = []
 
         this.as("display", "inline-block")
+
+        this.build()
+
+        this.hasNew = true
+
+        setInterval(this.checkLastBuilt.bind(this), 100)
+    }
+
+    checkLastBuilt(){
+        if(!this.hasNew) return false
+
+        const now = new Date().getTime()
+
+        const elapsed = ( now - this.lastBuilt )
+
+        const fire = ( elapsed > this.config.delay ) && this.hasNew
+
+        if(fire){
+            this.build()
+
+            this.hasNew = false
+        }
+
+        return fire
     }
 
     build(){
         this.x().a(this.items)
+
+        this.lastBuilt = new Date().getTime()
     }
 
     add(item){
@@ -177,6 +202,10 @@ class Logger_ extends SmartdomElement_{
         while(this.items.length > this.config.capacity){
             this.items.pop()
         }
+
+        this.hasNew = true
+
+        this.checkLastBuilt()
     }
 }
 function Logger(...props){return new Logger_(props)}

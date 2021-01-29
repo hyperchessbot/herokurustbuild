@@ -26,6 +26,7 @@
         <form id="chatform" onsubmit="return false;">
             <input id="text" type="text" />
             <input id="send" type="button" value="Send" />
+            <input id="flood" type="button" value="Flood" />
         </form>
 
         <script src="ws/smartdom.js"></script>
@@ -40,8 +41,6 @@
 
                 function log(msg) {
                     logger.add(LogItem({record: msg}))
-
-                    logger.build()
                 }
 
                 function connect() {
@@ -94,10 +93,28 @@
                 });
 
                 $('#send').click(function() {
-                    var text = $('#text').val();
+                    const text = $('#text').val();
+
                     log('Sending: ' + text);
                     conn.send(text);
+
                     $('#text').val('').focus();
+
+                    return false;
+                });
+
+                $('#flood').click(function() {
+                    const text = $('#text').val();
+
+                    for(let i = 0; i < 20; i++){
+                        setTimeout(_ => {
+                            log('Sending: ' + text);
+                            conn.send(text);                    
+                        }, i * 100)                        
+                    }
+
+                    $('#text').val('').focus();
+                    
                     return false;
                 });
 
