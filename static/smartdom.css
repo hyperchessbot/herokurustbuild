@@ -39,12 +39,28 @@
     background-color: #aaf;
 }
 
+.logitem.error .level {
+    color: #700;
+}
+
+.logitem.warn .level {
+    color: #770;
+}
+
 .logitem.info .level {
     color: #070;
 }
 
+.logitem.debug .level {
+    color: #007;
+}
+
+.logitem.trace .level {
+    color: #077;
+}
+
 .logitem .msg {    
-    width: 800px;
+    width: 899px;
     font-weight: bold;
     margin: 1px;
     margin-left: 5px;
@@ -56,6 +72,11 @@
 .logitem.raw .msg {
     background-color: #ffa;
     color: #00f;
+}
+
+.logitem.error .msg {
+    background-color: #ffa;
+    color: #f00;
 }
 
 .log {
