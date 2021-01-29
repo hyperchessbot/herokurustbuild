@@ -313,6 +313,13 @@ async fn index(
     HttpResponse::Ok().content_type("text/html").body(format!("{:?}<hr><a href='/ws'>web logger</a>", bot_state))    
 }
 
+// favicon
+async fn favicon(_: HttpRequest) -> Result<fs::NamedFile, Error> {
+    let path: std::path::PathBuf = "static/favicon.ico".parse().unwrap();
+
+    Ok(fs::NamedFile::open(path)?)
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // app entry point
 
@@ -365,6 +372,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>>{
     // spawn server
     HttpServer::new(move || App::new()
         .wrap(middleware::Logger::default())
+        .route("/favicon.ico", web::get().to(favicon))
         .service(web::resource("/ws/").route(web::get().to(ws_index)))
         .service(fs::Files::new("/ws", "static/").index_file("index.html"))
         .app_data(bot_data.clone())
