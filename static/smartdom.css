@@ -1,0 +1,28 @@
+.demo {
+    width: 200px;
+    height: 200px;
+    background-color: #0f0;
+}
+
+.logitem {
+    background-color: #eee;
+    padding: 3px;
+    margin: 1px;
+    font-family: monospace;    
+}
+
+.logitem .time {
+    width: 200px;
+    color: #007;    
+    margin: 1px;
+    background-color: #ddd;
+    padding: 2px;
+}
+
+.logitem .msg {
+    width: 800px;
+    font-weight: bold;
+    margin: 1px;
+    background-color: #ddd;
+    padding: 2px;    
+}

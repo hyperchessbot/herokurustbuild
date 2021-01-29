@@ -5,7 +5,8 @@
 
     <head>
 
-        <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>        
+        <link rel="stylesheet" href="ws/smartdom.css">
 
         <script language="javascript" type="text/javascript">
             $(function() {
@@ -102,6 +103,8 @@ return `
     
     <body>
 
+        <div id="root"></div>
+
         <div>
             <button id="connect">Connect</button>&nbsp;
             <span id="status">( - )</span>
@@ -117,6 +120,8 @@ return `
             <input id="text" type="text" />
             <input id="send" type="button" value="Send" />
         </form>
+
+        <script src="ws/smartdom.js"></script>
 
     </body>
 
