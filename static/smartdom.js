@@ -1,4 +1,10 @@
 class SmartdomElement_ {
+    // delete childs
+    x(){
+        this.innerHTML = ""
+        return this
+    }
+
     flattenProps(props){        
         // a terminal is something that is not an array
         if(!Array.isArray(props)) return props
@@ -43,6 +49,9 @@ class SmartdomElement_ {
                 this.otherProps.push(prop)
             }
         }
+
+        // config
+        this.config = this.otherProps[0] || {}
 
         // add all string props as classes
         for(let sprop of this.stringProps){
@@ -106,24 +115,68 @@ class LogItem_ extends SmartdomElement_{
         super("div", props)
 
         // determine record properties, supply reasonable default
-        this.record = this.otherProps[0] || {}
+        this.record = this.config.record || {}
+
+        if(typeof this.record == "string"){
+            try{
+                this.record = JSON.parse(this.record)
+            }catch(err){
+                this.record = {
+                    msg: this.record
+                }
+            }            
+        }
 
         // set record defaults
         this.record.time = this.record.time || new Date().getTime()
-        this.record.msg = this.record.msg || "log message"
+        this.record.msg = this.record.msg || this.record.toString()
 
-        this.timeDiv = div("time").html(this.record.timeFormatted || new Date(this.record.time).toLocaleString())
+        this.level = this.record.level || "Raw"
+
+        console.log(this.record)
+
+        this.timeDiv = div("time").html(this.record.timeFormatted || this.record.naiveTime || new Date(this.record.time).toLocaleString())
+        this.moduleDiv = div("module").html(this.record.modulePath || "")
+        this.levelDiv = div("level").html(this.level)
         this.msgDiv = div("msg").html(this.record.msg)
 
-        this.ac("logitem")
+        this.ac("logitem", this.level.toLowerCase())
 
-        this.container = div().as("display", "flex").as("align-items", "center").a(this.timeDiv, this.msgDiv)
+        this.timeAndModuleDiv = div("timeandmodule").a(this.timeDiv, this.moduleDiv)
+
+        this.container = div().as("display", "flex").as("align-items", "center").a(this.timeAndModuleDiv, this.levelDiv, this.msgDiv)
 
         this.as("display", "inline-block").a(this.container)
     }
 }
 function LogItem(...props){return new LogItem_(props)}
 
-let app = LogItem()
+// LogItem element
+class Logger_ extends SmartdomElement_{
+    constructor(...props){
+        super("div", props)
 
-//document.getElementById("root").appendChild(app.e)
+        this.ac("log")
+
+        this.config = {
+            capacity: this.config.capacity || 50
+        }
+
+        this.items = []
+
+        this.as("display", "inline-block")
+    }
+
+    build(){
+        this.x().a(this.items)
+    }
+
+    add(item){
+        this.items.unshift(item)
+
+        while(this.items.length > this.config.capacity){
+            this.items.pop()
+        }
+    }
+}
+function Logger(...props){return new Logger_(props)}
