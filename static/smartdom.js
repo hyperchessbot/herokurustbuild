@@ -159,7 +159,7 @@ class Logger_ extends SmartdomElement_{
         this.ac("log")
 
         this.config = {
-            capacity: this.config.capacity || 50,
+            capacity: this.config.capacity || 250,
             delay: this.config.delay || 1000,
         }
 

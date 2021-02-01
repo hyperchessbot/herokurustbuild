@@ -8,12 +8,13 @@ use actix_web::{web, middleware, App, HttpServer, Error, HttpRequest, HttpRespon
 use actix_files as fs;
 use actix_web_actors::ws;
 
-use log::{log_enabled, error, info, Level, LevelFilter, Record, Metadata, set_logger, set_max_level};
+use log::{log_enabled, error, info, debug, Level, LevelFilter, Record, Metadata, set_logger, set_max_level};
 
 use serde::{Serialize, Deserialize};
 use colored::*;
 
 use lichessbot::lichessbot::*;
+use uciengine::uciengine::*;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // config
@@ -188,6 +189,8 @@ struct MyWebSocket {
     hb: Instant,
     /// log manager
     log_man: web::Data<std::sync::Mutex::<LogManager>>,
+    /// engine
+    engine: web::Data<std::sync::Arc<UciEngine>>
 }
 
 /// implement actor for websocket
@@ -238,8 +241,12 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for MyWebSocket {
             Ok(ws::Message::Pong(_)) => {
                 self.hb = Instant::now()
             },
-            Ok(ws::Message::Text(text)) => {
-                ctx.text(text)
+            Ok(ws::Message::Text(text)) => {                
+                // treat message as engine command
+                self.engine.go(GoJob::new().custom(format!("{}",text)));
+
+                // echo message
+                ctx.text(text);
             },
             Ok(ws::Message::Binary(bin)) => {
                 ctx.binary(bin)
@@ -258,10 +265,14 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for MyWebSocket {
 /// websocket implementation
 impl MyWebSocket {
     /// create new websocket
-    fn new(log_man: web::Data<std::sync::Mutex::<LogManager>>) -> MyWebSocket {
+    fn new(
+        log_man: web::Data<std::sync::Mutex::<LogManager>>,
+        engine: web::Data<std::sync::Arc<UciEngine>>
+    ) -> MyWebSocket {
         MyWebSocket {
             hb: Instant::now(),
             log_man: log_man,
+            engine: engine,
         }
     }
 
@@ -293,10 +304,11 @@ impl MyWebSocket {
 async fn ws_index(
     r: HttpRequest,
     stream: web::Payload,
+    engine: web::Data<std::sync::Arc<UciEngine>>,
     log_man: web::Data<std::sync::Mutex::<LogManager>>
 ) -> Result<HttpResponse, Error> {
     // start websocket
-    let res = ws::start(MyWebSocket::new(log_man), &r, stream);    
+    let res = ws::start(MyWebSocket::new(log_man, engine), &r, stream);    
 
     res
 }
@@ -341,6 +353,60 @@ async fn main() -> Result<(), Box<dyn std::error::Error>>{
         .uci_opt("Contempt", std::env::var("RUST_BOT_ENGINE_CONTEMPT").unwrap_or("-25".to_string()))
         .enable_casual(true)
     ));
+
+    // create uci engine ( separate from bot's engine, for analysis )
+    let engine = UciEngine::new("./stockfish12");
+
+    // analysis watch receiver
+    let mut arx = engine.atx.subscribe();
+
+    // clone log manager for analysis watch
+    let log_man_analysis_watch_clone = log_man.clone();
+
+    tokio::spawn(async move {
+        let log_man = log_man_analysis_watch_clone;
+
+        if log_enabled!(Level::Info){
+            info!("starting analysis watch");
+        }
+
+        loop {
+            // receive analysis info
+            let rec_result = arx.recv().await;
+
+            debug!("rec analysis result {:?}", rec_result);
+
+            if let Ok(rec_result) = rec_result {
+                // received analysis ok
+                // get mutable refernce to log manager
+                let log_man = log_man.lock().unwrap();
+
+                // naive time
+                let naive_time = chrono::Utc::now().naive_local();
+
+                // analysis as json
+                let analysis_json = rec_result.to_json().unwrap_or("could not deserialize analysis info".to_string());
+                
+                // create log message for analysis info
+                let log_msg = LogMsg {
+                    level: format!("{:?}", Level::Warn),
+                    naive_time: format!("{}", naive_time),
+                    file: Some("!engine analysis!".to_string()),
+                    module_path: Some("!engine analysis!".to_string()),
+                    msg: format!("{}", analysis_json),
+                    formatted: format!("{}", analysis_json),
+                };
+
+                // send analysis info to websockets
+                for addr in log_man.client_addrs.iter() {
+                    addr.do_send(log_msg.clone());
+                }
+            }
+        }
+    });
+
+    // create web data for engine
+    let engine_data = web::Data::new(engine.clone());
     
     // create web data for bot state
     let bot_data = web::Data::new(bot.state.clone());
@@ -364,6 +430,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>>{
         .service(web::resource("/ws/").route(web::get().to(ws_index)))
         .service(fs::Files::new("/", "static/").index_file("index.html"))
         .app_data(bot_data.clone())
+        .app_data(engine_data.clone())
         .app_data(log_man.clone())
     )            
     .disable_signals()            

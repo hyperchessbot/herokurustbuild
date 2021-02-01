@@ -943,6 +943,7 @@ dependencies = [
  "serde",
  "serde_json",
  "tokio",
+ "uciengine",
 ]
 
 [[package]]
@@ -1121,9 +1122,9 @@ checksum = "89203f3fba0a3795506acaad8ebce3c80c0af93f994d5a1d7a0b1eeb23271929"
 
 [[package]]
 name = "lichessbot"
-version = "0.1.34"
+version = "0.1.35"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "86c581c95c903748413fff3d738e708b7a79000556c2484b25200c4af8562f06"
+checksum = "dccfe3e80c687147c4c705659774f9416e341ad54e82bdf1cce15a15bc7adf0b"
 dependencies = [
  "bytes 1.0.1",
  "dotenv",
@@ -2234,12 +2235,14 @@ checksum = "373c8a200f9e67a0c95e62a4f52fbf80c23b4381c05a17845531982fa99e6b33"
 
 [[package]]
 name = "uciengine"
-version = "0.1.24"
+version = "0.1.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8e4bdc693d482483db47c31c11f975bb04d4deda2feb0d25739d520e33e7cea3"
+checksum = "79eeff3f2a4652f6243f302d734b669d89e3dee61b849c8ffff50b2fbe1c1c6e"
 dependencies = [
- "env_logger",
  "log",
+ "serde",
+ "serde_json",
+ "thiserror",
  "tokio",
 ]
 
