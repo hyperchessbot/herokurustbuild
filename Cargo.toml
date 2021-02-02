@@ -6,17 +6,28 @@ edition = "2018"
 
 [dependencies]
 log = "0.4.14"
+
 chrono = "0.4.19"
+colored = "2.0.0"
+
 serde = "1.0.123"
 serde_json = "1.0.61"
-colored = "2.0.0"
-lichessbot = "0.1.35"
-uciengine = "0.1.31"
+
+lichessbot = "0.1.36"
+uciengine = "0.1.32"
+
 actix-web = "4.0.0-beta.1"
 actix = "0.11.0-beta.1"
 actix-codec = "0.4.0-beta.1"
 actix-web-actors = "4.0.0-beta.1"
 actix-files = "0.6.0-beta.1"
+actix-session = "0.4.0"
+
+oauth2 = "3.0.0-alpha.9"
+base64 = "0.10"
+rand = "0.7"
+url = "2.1"
+http = "0.1"
 
 [dependencies.tokio]
 version = "1.1.0"

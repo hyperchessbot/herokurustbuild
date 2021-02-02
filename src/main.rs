@@ -7,6 +7,9 @@ use actix::prelude::*;
 use actix_web::{web, middleware, App, HttpServer, Error, HttpRequest, HttpResponse};
 use actix_files as fs;
 use actix_web_actors::ws;
+use actix_session::{CookieSession, Session};
+
+use oauth2::basic::BasicClient;
 
 use log::{log_enabled, error, info, debug, Level, LevelFilter, Record, Metadata, set_logger, set_max_level};
 
@@ -30,6 +33,46 @@ const KICKSTART_QUEUE_CAPACITY: usize  = 20;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // models and implementation
+
+/// app state for oauth
+struct AppState {
+    oauth: BasicClient,
+    api_base_url: String,
+}
+
+/// gitlab user profile
+#[derive(Deserialize, Debug)]
+pub struct UserInfo {
+    id: u64,
+    name: String,
+    username: String,
+    state: String,
+    avatar_url: String,
+    web_url: String,
+    created_at: String,
+    bio: String,
+    location: String,
+    skype: String,
+    linkedin: String,
+    twitter: String,
+    website_url: String,
+    organization: String,
+    last_sign_in_at: String,
+    confirmed_at: String,
+    last_activity_on: String,
+    email: String,
+    theme_id: u32,
+    color_scheme_id: u32,
+    projects_limit: u32,
+    current_sign_in_at: String,
+    identities: Vec<String>,
+    can_create_group: bool,
+    can_create_project: bool,
+    two_factor_enabled: bool,
+    external: bool,
+    private_profile: bool,
+    is_admin: bool,
+}
 
 /// log message to be sent to weblogger
 #[derive(Message, Debug, Clone, Serialize, Deserialize)]
@@ -426,8 +469,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>>{
     // spawn server
     HttpServer::new(move || App::new()
         .wrap(middleware::Logger::default())
-        .route("/favicon.ico", web::get().to(favicon))
-        .service(web::resource("/ws/").route(web::get().to(ws_index)))
+        //.wrap(CookieSession::signed(&[0; 32]).secure(false))
+        .route("/favicon.ico", web::get().to(favicon))        
+        .service(web::resource("/ws/").route(web::get().to(ws_index)))        
         .service(fs::Files::new("/", "static/").index_file("index.html"))
         .app_data(bot_data.clone())
         .app_data(engine_data.clone())
